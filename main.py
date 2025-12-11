@@ -6,21 +6,12 @@ from tkinter import messagebox
 # 棋盘大小 (Max 20x20)
 Fila = 10
 Columna = 10
-NumMina = 50
+NumMina = 10
 
 DIRS = [(-1,-1), (-1,0), (-1,1),
         ( 0,-1),         ( 0,1),
         ( 1,-1), ( 1,0), ( 1,1)]
 
-"""
-1️⃣ 按钮创建与绑定重复
-2️⃣ 创建二维数组重复
-3️⃣ Confirmar_exista 与 generar_tablero_en_primer_click 中计算雷数重复
-4️⃣ 显示格子逻辑重复
-5️⃣ 胜利判断重复
-6️⃣ revelar_zona 与 chord 的部分逻辑类似
-7️⃣ 重复状态检查
-"""
 
 class JuegoBuscaMina:
 
@@ -32,6 +23,23 @@ class JuegoBuscaMina:
     def bind_button(self, boton, fila, columna):
         boton.bind("<Button-1>", lambda e: self.cuando_click(fila, columna))
         boton.bind("<Button-3>", lambda e: self.on_right_click(fila, columna))
+    
+    # ----------------- 查找临近地雷数量 -----------------
+    def contar_minas_vecinas(self, Junta, fila, columna):
+        contador = 0
+        for df, dc in DIRS:
+            nf, nc = fila + df, columna + dc
+            if 0 <= nf < Fila and 0 <= nc < Columna and Junta[nf][nc] == -1:
+                contador += 1
+        return contador
+
+    # ----------------- 确认是否存在雷 -----------------
+    def Confirmar_exista(self, Junta):
+        for fila in range(Fila):
+            for columna in range(Columna):
+                if Junta[fila][columna] == -1:
+                    continue
+                Junta[fila][columna] = self.contar_minas_vecinas(Junta, fila, columna)
 
     # ----------------- 构造函数 -----------------
     def __init__(self, master):
@@ -66,21 +74,7 @@ class JuegoBuscaMina:
                 self.bind_button(b, f, c)
                 b.grid(row=f, column=c, padx=1, pady=1)
                 self.botones[f][c] = b
-
-    # ----------------- 确认是否存在雷 -----------------
-    def Confirmar_exista(self, Junta):
-        Fila, Columna = len(Junta), len(Junta[0])                           # len(junta)：棋盘有几行；len(junta[0])：棋盘每行有几列。
-        for fila in range(Fila):
-            for columna in range(Columna):
-                if(Junta[fila][columna] == -1):                                      # 对每个格子进行检测直到发现雷
-                    continue                                                # 发现雷后开始运行，对雷附近的格子进行探测
-                CantidadMina = 0
-                for df, dc in DIRS:
-                    nf , nc = fila + df, columna + dc
-                    if 0 <= nf < Fila and 0 <= nc < Columna and Junta[nf][nc] == -1:
-                        CantidadMina += 1
-                    Junta[fila][columna] = CantidadMina
-
+  
     # ----------------- 生成 -----------------
     def generar_tablero_en_primer_click(self, fila, columna):
             """
