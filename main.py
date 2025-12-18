@@ -1,5 +1,6 @@
 import tkinter as tk
 import random  
+import time
 from collections import deque  
 from tkinter import messagebox
 
@@ -46,9 +47,32 @@ class JuegoBuscaMina:
         self.master = master
         master.title("BuscaMina")
 
-        # ---- 初始：创建空地图（不放雷，等待第一次点击时生成） ----
-        self.junta = self.Crear_Junta(Fila, Columna)
+        # 顶部信息栏
+        self.top_frame = tk.Frame(master, height=40)
+        self.top_frame.grid(row=0, column=0, columnspan=Columna, sticky="we")
 
+        # 时间显示
+        self.time_label = tk.Label(
+            self.top_frame, text="Time: 0", font=("Arial", 12)
+        )
+        self.time_label.pack(side="left", padx=10)
+
+        # 雷数显示
+        self.mine_label = tk.Label(
+            self.top_frame, text=f"Mines: {NumMina}", font=("Arial", 12)
+        )
+        self.mine_label.pack(side="right", padx=10)
+
+        # 创建空地图
+        self.junta = self.Crear_Junta(Fila, Columna)
+        
+        # 计时相关
+        self.start_time = None
+        self.timer_running = False
+        self.elapsed_time = 0
+        
+        # 插旗计数
+        self.flag_count = NumMina
         # 游戏是否结束
         self.game_over = False  
 
@@ -72,7 +96,7 @@ class JuegoBuscaMina:
             for c in range(Columna):
                 b = tk.Button(master, width=3, height=1)
                 self.bind_button(b, f, c)
-                b.grid(row=f, column=c, padx=1, pady=1)
+                b.grid(row=f+1, column=c, padx=1, pady=1)
                 self.botones[f][c] = b
   
     # ----------------- 生成 -----------------
@@ -140,6 +164,21 @@ class JuegoBuscaMina:
         # 禁用右键插旗
         btn.unbind("<Button-3>")
 
+    # ----------------- 定时更新 UI -----------------
+    def update_timer(self):
+        if not self.timer_running:
+            return
+
+        self.elapsed_time = int(time.time() - self.start_time)
+        self.time_label.config(text=f"Time: {self.elapsed_time}")
+
+        # 每 1000ms 更新一次
+        self.master.after(1000, self.update_timer)
+    
+    # ----------------- 更新雷数显示 -----------------
+    def update_mine_label(self):
+        self.mine_label.config(text=f"Mines: {self.flag_count}")
+
     # ----------------- 右键：插旗/取消插旗 -----------------
     def on_right_click(self, fila, columna):
         # 已经翻开的格子不能插旗
@@ -150,11 +189,15 @@ class JuegoBuscaMina:
             # 插旗
             self.flags[fila][columna] = True
             self.botones[fila][columna].config(text="F", fg="blue")
+            if self.flag_count > 1:
+                self.flag_count -= 1
         else:
             # 取消旗
             self.flags[fila][columna] = False
             self.botones[fila][columna].config(text="", fg="black")
-        return "break"
+            if self.flag_count < 10:
+                self.flag_count += 1
+        self.update_mine_label()
 
     # ----------------- 左键点击主逻辑 -----------------
     def cuando_click(self, fila, columna):
@@ -171,6 +214,12 @@ class JuegoBuscaMina:
         # 首次点击：生成地图并直接展开（尽量保证中心为0）
         if self.primer_click:
             self.primer_click = False
+            
+            # 启动计时
+            self.start_time = time.time()
+            self.timer_running = True
+            self.update_timer()
+
             self.generar_tablero_en_primer_click(fila, columna)
             nuevas = self.revelar_zona(fila, columna)
             if nuevas > 0:
@@ -316,8 +365,9 @@ class JuegoBuscaMina:
     def finalizar_juego(self, gano):
         if self.game_over:
             return
-
+        
         self.game_over = True
+        self.timer_running = False
 
         for f in range(Fila):
             for c in range(Columna):
@@ -327,7 +377,7 @@ class JuegoBuscaMina:
                 if not self.visible[f][c]:
                     # 失败：显示所有雷
                     if not gano and self.junta[f][c] == -1 and not self.visible[f][c]:
-                        btn.config(text="X", relief="sunken")
+                        btn.config(text="X", bg="red", relief="sunken")
                 
 if __name__ == "__main__":
     root = tk.Tk()
